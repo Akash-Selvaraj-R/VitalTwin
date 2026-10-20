@@ -358,8 +358,9 @@ VitalTwin/
 | GitHub Repository | Available — https://github.com/Akash-Selvaraj-R/VitalTwin |
 | README | Finalized |
 | Demo Video | To be added before final submission |
-| Architecture Diagram (PDF/PPT) | To be added before final submission |
-| Presentation (PDF/PPT) | To be added before final submission |
+| Architecture Diagram (PDF) | Available — [docs/VitalTwin_Architecture.pdf](docs/VitalTwin_Architecture.pdf) |
+| Presentation (PDF) | Available — [docs/VitalTwin_Competition_Presentation.pdf](docs/VitalTwin_Competition_Presentation.pdf) |
+| Presentation (PPTX) | Available — [docs/VitalTwin_Competition_Presentation.pptx](docs/VitalTwin_Competition_Presentation.pptx) |
 
 ## 22. Team Details
 
