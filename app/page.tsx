@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Activity,
   BrainCircuit,
@@ -32,10 +32,37 @@ import { DemoControls } from '@/components/demo-controls'
 import { CARD_SIGNALS, SIGNAL_META, formatSigned, formatValue, heroCopy, monitorState, relativeUpdate } from '@/lib/engine'
 import { useVitalTwin } from '@/lib/use-vital-twin'
 
+function greetingFor(date = new Date()): string {
+  const hour = date.getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
+}
+
 export default function Page() {
   const vt = useVitalTwin()
   const { engine, profile } = vt
   const [mobileNav, setMobileNav] = useState(false)
+
+  // Move focus into the top-most overlay so keyboard users are never stranded.
+  // Confirmations focus their safe action (CANCEL) via autoFocus instead.
+  useEffect(() => {
+    if (vt.confirm) return
+    if (vt.drawer || vt.why || vt.tour) {
+      const layer = document.querySelector<HTMLElement>('.drawer, .confirm-card, .tour-card')
+      layer?.focus()
+    }
+  }, [vt.drawer, vt.why, vt.confirm, vt.tour])
+
+  // Escape also closes the mobile navigation drawer.
+  useEffect(() => {
+    if (!mobileNav) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileNav(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [mobileNav])
 
   const hero = heroCopy(engine.twinState)
   const stateKey = engine.twinState.toLowerCase()
@@ -65,6 +92,19 @@ export default function Page() {
     { label: 'Settings', icon: Settings, action: () => vt.setDrawer('settings') },
   ]
 
+  if (!vt.hydrated) {
+    // Avoid flashing onboarding (or a mismatched dashboard) while local storage is read.
+    return (
+      <main className="onboarding boot-splash">
+        <div className="boot-brand">
+          <div className="brand-mark" />
+          <b>VITALTWIN</b>
+          <small>SYNCING YOUR PERSONAL TWIN…</small>
+        </div>
+      </main>
+    )
+  }
+
   if (vt.onboarding) {
     return <Onboarding profile={profile} onChange={update} onSubmit={saveProfileForm} />
   }
@@ -91,8 +131,8 @@ export default function Page() {
           </div>
           <ChevronRight />
         </button>
-        <nav>
-          <button className="nav-active">
+        <nav aria-label="Primary">
+          <button className="nav-active" aria-current="page">
             <Activity /> Overview
           </button>
           {navItems.slice(1).map(item => (
@@ -120,7 +160,9 @@ export default function Page() {
             <span className="eyebrow">
               PERSONAL DIGITAL TWIN · {relativeUpdate(vt.lastUpdateMs)} · {engine.syncQuality.toFixed(1)}% SYNC
             </span>
-            <h2>Good morning, {profile.name || 'there'}.</h2>
+            <h2>
+              {greetingFor()}, {profile.name || 'there'}.
+            </h2>
           </div>
           <div className="top-actions">
             <button className="quiet-button" onClick={() => vt.setDrawer('profile')}>
@@ -214,7 +256,12 @@ export default function Page() {
             </div>
             <div className="scenario-controls">
               {(['stable', 'elevated', 'recovery'] as const).map(key => (
-                <button key={key} className={engine.scenario === key ? 'selected' : ''} onClick={() => vt.applyScenario(key)}>
+                <button
+                  key={key}
+                  className={engine.scenario === key ? 'selected' : ''}
+                  aria-pressed={engine.scenario === key}
+                  onClick={() => vt.applyScenario(key)}
+                >
                   {key === 'stable' ? 'STABLE DAY' : key === 'elevated' ? 'ELEVATED SIGNALS' : 'RECOVERY'}
                 </button>
               ))}
@@ -297,6 +344,7 @@ export default function Page() {
       {(vt.drawer || vt.why || vt.tour || vt.confirm || mobileNav) && (
         <div
           className="overlay"
+          aria-hidden="true"
           onClick={() => {
             if (!vt.confirm) {
               setMobileNav(false)
@@ -307,7 +355,7 @@ export default function Page() {
       )}
 
       {mobileNav && (
-        <nav className="mobile-nav">
+        <nav className="mobile-nav" aria-label="Mobile">
           <div className="mobile-nav-head">
             <b>VITALTWIN</b>
             <button onClick={() => setMobileNav(false)} aria-label="Close navigation">

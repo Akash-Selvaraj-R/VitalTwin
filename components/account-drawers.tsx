@@ -22,7 +22,7 @@ export function ProfileDrawer({
   onLogout: () => void
 }) {
   return (
-    <aside className="drawer">
+    <aside className="drawer" role="dialog" aria-modal="true" aria-label="Patient profile" tabIndex={-1}>
       <button className="close-button" onClick={onClose} aria-label="Close profile">
         <X />
       </button>
@@ -82,7 +82,7 @@ export function SettingsDrawer({
   onLogout: () => void
 }) {
   return (
-    <aside className="drawer">
+    <aside className="drawer" role="dialog" aria-modal="true" aria-label="Settings" tabIndex={-1}>
       <button className="close-button" onClick={onClose} aria-label="Close settings">
         <X />
       </button>
@@ -123,18 +123,20 @@ export function ConfirmCard({
   onCancel: () => void
 }) {
   return (
-    <div className="confirm-card">
-      <h2>{kind === 'logout' ? 'Log out of VitalTwin?' : 'Clear local health data?'}</h2>
+    <div className="confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" tabIndex={-1}>
+      <h2 id="confirm-title">{kind === 'logout' ? 'Log out of VitalTwin?' : 'Clear local health data?'}</h2>
       <p>
         {kind === 'logout'
-          ? 'Logging out ends this session. Your saved profile stays on this device.'
-          : 'This permanently removes your saved profile from this device.'}
+          ? 'Logging out ends this session and returns you to onboarding. Your saved profile stays on this device.'
+          : 'This permanently removes your saved profile and local settings from this device. It cannot be undone — you will start again from onboarding.'}
       </p>
       <div className="confirm-actions">
         <button className="danger" onClick={onConfirm}>
           {kind === 'logout' ? 'LOG OUT' : 'CLEAR DATA'}
         </button>
-        <button onClick={onCancel}>CANCEL</button>
+        <button onClick={onCancel} autoFocus>
+          CANCEL
+        </button>
       </div>
     </div>
   )

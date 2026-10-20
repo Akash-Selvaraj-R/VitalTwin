@@ -15,6 +15,8 @@ function Field({
   onChange,
   type = 'text',
   placeholder,
+  required = false,
+  inputProps,
 }: {
   label: string
   name: keyof Profile
@@ -22,11 +24,16 @@ function Field({
   onChange: (value: string) => void
   type?: string
   placeholder?: string
+  required?: boolean
+  inputProps?: React.InputHTMLAttributes<HTMLInputElement>
 }) {
   return (
     <label className="field">
-      <span>{label}</span>
-      <input name={name} type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} />
+      <span>
+        {label}
+        {required ? ' *' : ''}
+      </span>
+      <input name={name} type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} required={required} {...inputProps} />
     </label>
   )
 }
@@ -60,8 +67,16 @@ export function Onboarding({
         </p>
         <form onSubmit={onSubmit}>
           <div className="form-grid">
-            <Field label="Full name" name="name" value={profile.name} onChange={onChange('name')} placeholder="Your name" />
-            <Field label="Age" name="age" value={profile.age} onChange={onChange('age')} type="number" placeholder="Years" />
+            <Field label="Full name" name="name" value={profile.name} onChange={onChange('name')} placeholder="Your name" required />
+            <Field
+              label="Age"
+              name="age"
+              value={profile.age}
+              onChange={onChange('age')}
+              type="number"
+              placeholder="Years"
+              inputProps={{ min: 5, max: 120, inputMode: 'numeric' }}
+            />
             <label className="field">
               <span>Gender presentation</span>
               <select value={profile.sex} onChange={e => onChange('sex')(e.target.value)}>

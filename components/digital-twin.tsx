@@ -19,6 +19,30 @@ type Props = {
   live: boolean
 }
 
+/**
+ * Subtle body-proportion variation from the patient's profile choice.
+ * Deliberately restrained — a gentle difference in shoulder/hip line,
+ * never a stereotyped or exaggerated character design. Everything else
+ * (colour, glow, motion, zones) is identical for every patient.
+ */
+const SILHOUETTES: Record<string, { torso: string; armL: string; armR: string }> = {
+  Female: {
+    torso: 'M107 146 Q160 120 213 146 L206 296 Q160 314 114 296 Z',
+    armL: 'M107 150 Q81 190 73 248 L63 302',
+    armR: 'M213 150 Q239 190 247 248 L257 302',
+  },
+  Male: {
+    torso: 'M102 146 Q160 116 218 146 L204 296 Q160 314 116 296 Z',
+    armL: 'M102 150 Q77 190 70 248 L61 302',
+    armR: 'M218 150 Q243 190 250 248 L259 302',
+  },
+  neutral: {
+    torso: 'M104 146 Q160 118 216 146 L205 296 Q160 314 115 296 Z',
+    armL: 'M104 150 Q78 190 71 248 L62 302',
+    armR: 'M216 150 Q242 190 249 248 L258 302',
+  },
+}
+
 export function DigitalTwin({ signals, state, sex, monitorLabel, live }: Props) {
   const beatSeconds = 60 / clamp(signals.hr, 45, 170)
   const breathSeconds = 60 / clamp(signals.rr, 8, 30) / 2
@@ -27,10 +51,14 @@ export function DigitalTwin({ signals, state, sex, monitorLabel, live }: Props) 
   const spo2Glow = clamp((98.5 - signals.spo2) / 3.5, 0, 1)
 
   const stateKey = state.toLowerCase()
+  const shape = SILHOUETTES[sex] ?? SILHOUETTES.neutral
+  const knownSex = sex === 'Female' || sex === 'Male'
+  const ariaLabel = `Live digital twin${knownSex ? ` tuned for a ${sex.toLowerCase()} patient` : ''} — ${state} (simulated signals)`
 
   return (
     <div
       className={`twin-stage twin-${stateKey}`}
+      data-sex={sex.toLowerCase()}
       style={{
         ['--beat' as string]: `${beatSeconds.toFixed(3)}s`,
         ['--breath' as string]: `${breathSeconds.toFixed(3)}s`,
@@ -50,7 +78,7 @@ export function DigitalTwin({ signals, state, sex, monitorLabel, live }: Props) 
       <span className="twin-particle p4" />
       <span className="twin-particle p5" />
 
-      <svg className="twin-svg" viewBox="0 0 320 470" role="img" aria-label={`${sex} patient's live digital twin — ${state}`}>
+      <svg className="twin-svg" viewBox="0 0 320 470" role="img" aria-label={ariaLabel}>
         <defs>
           <radialGradient id="twin-core-glow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="currentColor" stopOpacity="0.35" />
@@ -79,9 +107,9 @@ export function DigitalTwin({ signals, state, sex, monitorLabel, live }: Props) 
         <g className="silhouette">
           <ellipse cx="160" cy="66" r="33" ry="39" />
           <path d="M147 102 v18 M173 102 v18" />
-          <path className="torso" d="M104 146 Q160 118 216 146 L205 296 Q160 314 115 296 Z" />
-          <path d="M104 150 Q78 190 71 248 L62 302" />
-          <path d="M216 150 Q242 190 249 248 L258 302" />
+          <path className="torso" d={shape.torso} />
+          <path d={shape.armL} />
+          <path d={shape.armR} />
           <circle className="hand" cx="61" cy="308" r="4.5" />
           <circle className="hand" cx="259" cy="308" r="4.5" />
           <path d="M128 306 L121 428 M192 306 L199 428" />

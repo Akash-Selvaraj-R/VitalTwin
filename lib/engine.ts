@@ -41,6 +41,12 @@ export type Baseline = Record<SignalKey, number>
 
 export type DeviationDirection = 'WITHIN' | 'ABOVE' | 'BELOW'
 
+/** How long a deviation has held — a momentary spike is not a pattern. */
+export type SignalStreak = { dir: DeviationDirection; count: number }
+
+/** Ticks a deviation must hold before the twin treats it as meaningful evidence. */
+const ACTIVATION_TICKS = 5
+
 export type SignalMeta = {
   label: string
   short: string
@@ -125,6 +131,8 @@ export type EngineState = {
   baseline: Baseline
   readings: SignalReading[]
   trend: Record<SignalKey, number[]>
+  /** consecutive ticks each signal has held its current deviation direction */
+  streaks: Record<SignalKey, SignalStreak>
   twinState: TwinState
   previousState: TwinState
   pendingState: TwinState | null
@@ -165,9 +173,11 @@ export const SIGNAL_META: Record<SignalKey, SignalMeta> = {
   hr: { label: 'Heart rate', short: 'HR', unit: 'BPM', decimals: 0, tolerance: 0.08, major: 0.16, weight: 1.25 },
   spo2: { label: 'Blood oxygen', short: 'SPO2', unit: '%', decimals: 0, tolerance: 0.012, major: 0.025, weight: 1.4 },
   temp: { label: 'Temperature', short: 'TEMP', unit: '°C', decimals: 1, tolerance: 0.01, major: 0.02, weight: 0.8 },
-  rr: { label: 'Respiratory rate', short: 'RR', unit: '/MIN', decimals: 0, tolerance: 0.12, major: 0.22, weight: 0.9 },
+  // rr / stress tolerances are calibrated against this engine's own noise scale,
+  // so "meaningful" means beyond normal physiological wander — not a brief graze.
+  rr: { label: 'Respiratory rate', short: 'RR', unit: '/MIN', decimals: 0, tolerance: 0.15, major: 0.26, weight: 0.9 },
   bp: { label: 'Blood pressure', short: 'BP', unit: 'mmHg', decimals: 0, tolerance: 0.07, major: 0.14, weight: 0.8 },
-  stress: { label: 'Stress load', short: 'STRESS', unit: '%', decimals: 0, tolerance: 0.3, major: 0.6, weight: 1.0 },
+  stress: { label: 'Stress load', short: 'STRESS', unit: '%', decimals: 0, tolerance: 0.35, major: 0.65, weight: 1.0 },
   recovery: { label: 'Recovery', short: 'RECOVERY', unit: '%', decimals: 0, tolerance: 0.12, major: 0.25, weight: 1.0 },
   activity: { label: 'Movement', short: 'ACT', unit: '%', decimals: 0, tolerance: 0.6, major: 1.4, weight: 0, passive: true },
 }
@@ -288,7 +298,10 @@ export function computeBaseline(profile: Profile): Baseline {
 const SCENARIO_DELTA: Record<Scenario, Partial<Record<SignalKey, number>>> = {
   stable: { hr: 2, spo2: 0, temp: 0, rr: 0, bp: 2, stress: -1, recovery: 2, activity: 0 },
   elevated: { hr: 19, spo2: -2.3, temp: 0.45, rr: 4, bp: 14, stress: 41, recovery: -25, activity: 29 },
-  recovery: { hr: 5, spo2: -0.3, temp: 0.1, rr: 1, bp: 4, stress: 8, recovery: -9, activity: -9 },
+  // Recovery targets sit comfortably INSIDE per-signal tolerance, so a drifted
+  // system can visibly settle all the way back to STABLE instead of hovering
+  // forever at the edge of the "meaningful" threshold.
+  recovery: { hr: 2, spo2: -0.3, temp: 0.1, rr: 0.5, bp: 3, stress: 2, recovery: -4, activity: -9 },
 }
 
 export function scenarioTargets(baseline: Baseline, scenario: Scenario): Signals {
@@ -370,28 +383,28 @@ export function scoreLabel(score: number): string {
 /* Twin state machine (with hysteresis so transitions feel deliberate) */
 /* ------------------------------------------------------------------ */
 
-function decideState(readings: SignalReading[], previous: TwinState, trend: number, scenario: Scenario): TwinState {
-  const active = readings.filter(r => r.meaningful)
-  const major = readings.filter(r => r.major)
-
+/**
+ * Twin state decision.
+ * `active` / `major` contain only SUSTAINED deviations (see ACTIVATION_TICKS).
+ * `trend` is POSITIVE when the weighted deviation is shrinking (improving).
+ */
+function decideState(active: SignalReading[], major: SignalReading[], previous: TwinState, trend: number, scenario: Scenario): TwinState {
   if (major.length >= 1 || active.length >= 3) return 'ATTENTION'
 
   if (active.length === 2) {
-    if (previous === 'ATTENTION' && trend < -1.5) return 'RECOVERING'
+    if (previous === 'ATTENTION' && trend > 1.5) return 'RECOVERING'
     return 'ATTENTION'
   }
 
   if (active.length === 1) {
     if (scenario === 'recovery') return 'RECOVERING'
-    if (previous === 'ATTENTION' && trend < -0.6) return 'RECOVERING'
-    if (previous === 'RECOVERING') return trend <= 0.4 ? 'RECOVERING' : 'ATTENTION'
+    if (previous === 'ATTENTION' && trend > 0.6) return 'RECOVERING'
+    if (previous === 'RECOVERING') return trend > 0.4 ? 'RECOVERING' : 'ATTENTION'
     return 'ATTENTION'
   }
 
-  // No meaningful deviations left.
-  if (previous === 'RECOVERING') return 'STABLE'
+  // No sustained deviations left — wherever it came from, the twin has settled.
   if (previous === 'ATTENTION') return 'RECOVERING'
-  if (scenario === 'recovery') return 'RECOVERING'
   return 'STABLE'
 }
 
@@ -632,6 +645,8 @@ export function createEngine(profile: Profile): EngineState {
   const readings = computeReadings(signals, baseline)
   const trend = {} as Record<SignalKey, number[]>
   for (const key of SIGNAL_KEYS) trend[key] = [signals[key]]
+  const streaks = {} as Record<SignalKey, SignalStreak>
+  for (const reading of readings) streaks[reading.key] = { dir: reading.direction, count: ACTIVATION_TICKS }
 
   const state: EngineState = {
     seed,
@@ -642,6 +657,7 @@ export function createEngine(profile: Profile): EngineState {
     baseline,
     readings,
     trend,
+    streaks,
     twinState: 'STABLE',
     previousState: 'STABLE',
     pendingState: null,
@@ -707,12 +723,26 @@ export function stepEngine(prev: EngineState, dtMs: number = TICK_MS): EngineSta
   const readings = computeReadings(signals, prev.baseline)
   const score = computeScore(readings, signals)
 
-  // Overall movement relative to baseline — used to detect "moving back".
+  // Direction streaks: how long each signal has held its current direction.
+  const streaks = {} as Record<SignalKey, SignalStreak>
+  for (const reading of readings) {
+    const before = prev.streaks[reading.key]
+    streaks[reading.key] =
+      before && before.dir === reading.direction
+        ? { dir: reading.direction, count: Math.min(before.count + 1, 9999) }
+        : { dir: reading.direction, count: 1 }
+  }
+  const streakOf = (key: SignalKey) => streaks[key]?.count ?? ACTIVATION_TICKS
+  /** A deviation the twin treats as evidence — held for ACTIVATION_TICKS consecutive ticks. */
+  const sustained = readings.filter(r => r.meaningful && !r.meta.passive && streakOf(r.key) >= ACTIVATION_TICKS)
+  const sustainedMajor = sustained.filter(r => r.major)
+
+  // Overall movement relative to baseline: POSITIVE = moving back toward baseline.
   const deviationNow = readings.filter(r => r.meaningful).reduce((sum, r) => sum + Math.abs(r.pct) * r.meta.weight, 0)
   const deviationBefore = prev.readings.filter(r => r.meaningful).reduce((sum, r) => sum + Math.abs(r.pct) * r.meta.weight, 0)
   const trendValue = deviationBefore - deviationNow
 
-  const candidate = decideState(readings, prev.twinState, trendValue, prev.scenario)
+  const candidate = decideState(sustained, sustainedMajor, prev.twinState, trendValue, prev.scenario)
   let twinState = prev.twinState
   let previousState = prev.previousState
   let pendingState = prev.pendingState
@@ -722,7 +752,8 @@ export function stepEngine(prev: EngineState, dtMs: number = TICK_MS): EngineSta
     pendingTicks = 0
   } else if (candidate === pendingState) {
     pendingTicks += 1
-    if (pendingTicks >= 2) {
+    // Three consecutive ticks of agreement — brief noise grazes never flip the state.
+    if (pendingTicks >= 3) {
       previousState = twinState
       twinState = candidate
       pendingState = null
@@ -739,15 +770,14 @@ export function stepEngine(prev: EngineState, dtMs: number = TICK_MS): EngineSta
   const ctx = { tick, simTime }
   const tickScale = Math.round(scale)
 
-  // --- Signal change events (only on meaningful transitions) ---
+  // --- Signal change events (only when a deviation becomes CONFIRMED evidence) ---
   for (const reading of readings) {
     if (reading.meta.passive) continue
-    const before = prev.readings.find(r => r.key === reading.key)
-    const crossed = before ? before.direction === 'WITHIN' && reading.direction !== 'WITHIN' : false
-    const escalated = before ? !before.meaningful && reading.meaningful : false
+    const justConfirmed = reading.meaningful && streakOf(reading.key) === ACTIVATION_TICKS
     const key = `${reading.key}:${reading.direction}`
-    const cooled = (cooldowns[key] ?? 0) > tick - 8 * tickScale
-    if ((crossed || escalated) && !cooled && reading.meaningful) {
+    const lastFired = cooldowns[key] ?? 0
+    const cooled = lastFired > 0 && lastFired > tick - 8 * tickScale
+    if (justConfirmed && !cooled) {
       cooldowns[key] = tick
       const dirWord = reading.direction === 'ABOVE' ? 'above' : 'below'
       events.push(
@@ -764,13 +794,15 @@ export function stepEngine(prev: EngineState, dtMs: number = TICK_MS): EngineSta
     }
   }
 
-  // --- Recovery events (a deviated signal returns to pattern) ---
+  // --- Recovery events (a sustained deviation returns to pattern) ---
   for (const reading of readings) {
     if (reading.meta.passive || reading.meaningful) continue
-    const before = prev.readings.find(r => r.key === reading.key)
-    if (before?.meaningful) {
+    const before = prev.streaks[reading.key]
+    const returnedToPattern = streakOf(reading.key) === ACTIVATION_TICKS && before && before.dir !== 'WITHIN'
+    if (returnedToPattern) {
       const key = `${reading.key}:recover`
-      const cooled = (cooldowns[key] ?? 0) > tick - 10 * tickScale
+      const lastFired = cooldowns[key] ?? 0
+      const cooled = lastFired > 0 && lastFired > tick - 10 * tickScale
       if (!cooled) {
         cooldowns[key] = tick
         events.push(
@@ -869,6 +901,7 @@ export function stepEngine(prev: EngineState, dtMs: number = TICK_MS): EngineSta
     signals,
     readings,
     trend,
+    streaks,
     twinState,
     previousState,
     pendingState,

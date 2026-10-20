@@ -8,14 +8,6 @@
 import { BrainCircuit, ChevronRight } from 'lucide-react'
 import { formatClock, type IntelEvent } from '@/lib/engine'
 
-const KIND_LABEL: Record<IntelEvent['kind'], string> = {
-  'SIGNAL CHANGE': 'SIGNAL CHANGE',
-  'TWIN STATE': 'TWIN STATE',
-  RECOVERY: 'RECOVERY',
-  SYSTEM: 'SYSTEM',
-  DEMO: 'DEMO',
-}
-
 export function IntelligenceFeed({
   events,
   onExplain,
@@ -34,7 +26,7 @@ export function IntelligenceFeed({
         </span>
       </div>
 
-      <div className="event-list">
+      <div className="event-list" aria-live="polite">
         {events.slice(0, 6).map((event, index) => (
           <button
             className={`event-row sev-${event.severity} ${index === 0 ? 'event-new' : ''}`}
@@ -42,7 +34,7 @@ export function IntelligenceFeed({
             onClick={() => onExplain(event)}
           >
             <span className="event-time">{formatClock(event.time)}</span>
-            <b className={`event-kind kind-${event.severity}`}>{KIND_LABEL[event.kind]}</b>
+            <b className={`event-kind kind-${event.severity}`}>{event.kind}</b>
             <span className="event-title">{event.title}</span>
             <span className="event-why">
               WHY AM I SEEING THIS? <ChevronRight />

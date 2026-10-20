@@ -28,13 +28,13 @@ export function TourOverlay({
 }) {
   const last = step === STEPS.length - 1
   return (
-    <div className="tour-card">
+    <div className="tour-card" role="dialog" aria-modal="true" aria-label="Guided product tour" tabIndex={-1}>
       <span className="eyebrow">
         WELCOME TO VITALTWIN · 0{step + 1}/0{STEPS.length}
       </span>
       <h2>{STEPS[step].label}</h2>
       <p>{STEPS[step].text}</p>
-      <div className="tour-dots">
+      <div className="tour-dots" aria-hidden="true">
         {STEPS.map((item, index) => (
           <i key={item.label} className={index === step ? 'selected' : ''} />
         ))}

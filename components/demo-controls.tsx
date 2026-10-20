@@ -55,6 +55,7 @@ export function DemoControls({ engine, live, paused, onScenario, onToggle, onAdv
           <button
             key={key}
             className={`scenario-button sc-${key} ${engine.scenario === key ? 'selected' : ''}`}
+            aria-pressed={engine.scenario === key}
             onClick={() => onScenario(key)}
           >
             <i /> {SCENARIO_LABEL[key]}

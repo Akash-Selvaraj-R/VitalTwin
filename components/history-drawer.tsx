@@ -5,6 +5,7 @@
  * synthetic history plus live captures, with 24H / 7D / 30D ranges.
  */
 
+import { useMemo } from 'react'
 import { X } from 'lucide-react'
 import { generateHistory, type EngineState, type HistoryPoint, type HistoryRange } from '@/lib/engine'
 
@@ -67,14 +68,20 @@ export function HistoryDrawer({
   onRange: (range: HistoryRange) => void
   onClose: () => void
 }) {
-  const synthetic = generateHistory(engine.baseline, engine.seed, engine.simTime)
+  // Deterministic synthetic history only depends on the patient's baseline and
+  // seed — memoize it so live ticks don't regenerate 60+ points every frame.
+  const synthetic = useMemo(
+    () => generateHistory(engine.baseline, engine.seed, engine.simTime),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [engine.baseline, engine.seed],
+  )
 
   const rangePoints = synthetic[range]
   const livePoints = engine.liveHistory.filter(() => range === '24H')
   const rows = [...livePoints.slice(0, 8), ...[...rangePoints].reverse().slice(0, range === '24H' ? 12 : 10)]
 
   return (
-    <aside className="drawer history-drawer">
+    <aside className="drawer history-drawer" role="dialog" aria-modal="true" aria-label="Health history" tabIndex={-1}>
       <button className="close-button" onClick={onClose} aria-label="Close history">
         <X />
       </button>
@@ -82,9 +89,15 @@ export function HistoryDrawer({
       <h2>Your health timeline.</h2>
       <p>Synthetic history and live captures, each compared against your personal baseline.</p>
 
-      <div className="history-tabs">
+      <div className="history-tabs" role="tablist" aria-label="History range">
         {RANGES.map(item => (
-          <button key={item} className={range === item ? 'selected' : ''} onClick={() => onRange(item)}>
+          <button
+            key={item}
+            role="tab"
+            aria-selected={range === item}
+            className={range === item ? 'selected' : ''}
+            onClick={() => onRange(item)}
+          >
             {item}
           </button>
         ))}

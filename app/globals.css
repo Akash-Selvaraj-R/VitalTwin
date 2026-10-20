@@ -44,3 +44,14 @@ nav button{border-radius:0;border-left:3px solid transparent;font-weight:800;tex
 .onboarding{background:var(--bg)}.onboard-card{border-radius:0!important;border:2px solid var(--cyan)!important;background:var(--panel)!important;box-shadow:7px 7px 0 #24606b!important}.onboard-card h1{font-family:Arial,sans-serif;font-weight:900;text-transform:uppercase}.onboard-card h1 span{color:var(--cyan)}.field input,.field select{border-radius:0!important;border:2px solid var(--edge)!important;background:#081114!important}.field input:focus,.field select:focus{border-color:var(--cyan)!important;box-shadow:4px 4px 0 #24606b!important}.trust-note,.demo-disclaimer{border-radius:0!important;border:2px solid var(--edge)!important}.state-pill{border-radius:0!important;border:2px solid var(--green)!important;font-weight:900}
 @media(max-width:640px){.sidebar{display:none}.topbar{border-bottom:2px solid var(--edge)}.hero-grid{padding-top:24px}.hero-panel,.panel,.intelligence-panel,.baseline-panel,.timeline-panel{box-shadow:4px 4px 0 #172f35!important}.onboard-card{box-shadow:5px 5px 0 #24606b!important}}
 @media(prefers-reduced-motion:reduce){.patient-chip,.hero-panel,.metric,.primary-button,.quiet-button,.live-button,nav button{transition:none!important;box-shadow:none!important}}
+
+
+/* VitalTwin final-pass polish: boot splash + dialog focus handling */
+.boot-splash{min-height:100vh;display:grid;place-items:center;padding:0}
+.boot-brand{display:flex;align-items:center;gap:14px;letter-spacing:.18em}
+.boot-brand b{font:900 16px ui-monospace}
+.boot-brand small{display:block;color:var(--muted);font:9px ui-monospace;letter-spacing:.16em;margin-top:4px}
+.drawer:focus,.history-drawer:focus,.explain-drawer:focus,.tour-card:focus,.confirm-card:focus{outline:none}
+.tour-card{border:2px solid var(--cyan);box-shadow:8px 8px 0 #24606b}
+.tour-card h2{font-family:Arial,Helvetica,sans-serif;font-weight:900;letter-spacing:-.04em;font-size:28px}
+.confirm-actions button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
