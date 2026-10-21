@@ -1,10 +1,23 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+
+// Self-hosted type system — no runtime network dependency.
+// Display grotesk for headlines, neutral sans for interface copy,
+// clinical monospace for system data and metadata.
+import '@fontsource-variable/inter'
+import '@fontsource-variable/space-grotesk'
+import '@fontsource/ibm-plex-mono/400.css'
+import '@fontsource/ibm-plex-mono/500.css'
+import '@fontsource/ibm-plex-mono/600.css'
+import '@fontsource/ibm-plex-mono/700.css'
+
 import './globals.css'
+import './live.css'
 
 export const metadata: Metadata = {
-  title: 'VitalTwin — Personal Digital Twin',
-  description: 'A calm, explainable personal health intelligence prototype built around your Digital Twin and personal baseline.',
+  title: 'VitalTwin — Your Health. Simulated. Understood.',
+  description:
+    'A personal health digital twin that learns your baseline, watches simulated signals, and explains what it sees. A calm, explainable health intelligence prototype.',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -26,8 +39,8 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'dark',
-  themeColor: '#070b0e',
+  colorScheme: 'light',
+  themeColor: '#EAE6DA',
 }
 
 export default function RootLayout({

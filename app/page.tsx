@@ -132,12 +132,15 @@ export default function Page() {
           <ChevronRight />
         </button>
         <nav aria-label="Primary">
-          <button className="nav-active" aria-current="page">
-            <Activity /> Overview
-          </button>
-          {navItems.slice(1).map(item => (
-            <button key={item.label} onClick={item.action}>
-              <item.icon /> {item.label}
+          {navItems.map((item, index) => (
+            <button
+              key={item.label}
+              className={index === 0 ? 'nav-active' : undefined}
+              aria-current={index === 0 ? 'page' : undefined}
+              onClick={item.action}
+            >
+              <span className="nav-index">{String(index + 1).padStart(2, '0')}</span>
+              <item.icon /> <span className="nav-label">{item.label}</span>
             </button>
           ))}
         </nav>
@@ -205,6 +208,20 @@ export default function Page() {
                 TAKE THE TOUR <ChevronRight />
               </button>
             </div>
+            <dl className="hero-meta">
+              <div>
+                <dt>MODEL</dt>
+                <dd>VT-01</dd>
+              </div>
+              <div>
+                <dt>SIGNALS IN PLAY</dt>
+                <dd>{String(engine.readings.length).padStart(2, '0')}</dd>
+              </div>
+              <div>
+                <dt>BASELINE</dt>
+                <dd>PERSONAL</dd>
+              </div>
+            </dl>
             {latestEvent && (
               <button className="assistant-message" onClick={() => vt.setWhy({ event: latestEvent })}>
                 <BrainCircuit />
@@ -237,9 +254,21 @@ export default function Page() {
             <EcgStrip signals={engine.signals} state={engine.twinState} />
             <div className="twin-footer">
               <span>
-                SYNC QUALITY <b>{engine.syncQuality.toFixed(1)}%</b>
+                <small>SYNC QUALITY</small>
+                <b>{engine.syncQuality.toFixed(1)}%</b>
               </span>
-              <span>SIMULATED SIGNALS · {engine.signalCount.toLocaleString('en-US')} SAMPLES</span>
+              <span>
+                <small>SAMPLES</small>
+                <b>{engine.signalCount.toLocaleString('en-US')}</b>
+              </span>
+              <span>
+                <small>LAST UPDATE</small>
+                <b>{relativeUpdate(vt.lastUpdateMs)}</b>
+              </span>
+              <span>
+                <small>MODEL</small>
+                <b>VT-01</b>
+              </span>
             </div>
           </section>
         </div>

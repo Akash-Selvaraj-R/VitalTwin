@@ -2,11 +2,15 @@
 
 /**
  * Onboarding — preserved profile creation flow with local-only storage
- * and synthetic-data framing.
+ * and synthetic-data framing, presented as the VitalTwin landing experience:
+ * editorial hero, live twin preview that forms as the profile is typed,
+ * and the intake form.
  */
 
+import { useMemo } from 'react'
 import { ChevronRight, Info, ShieldCheck, Zap } from 'lucide-react'
-import type { Profile } from '@/lib/engine'
+import { DigitalTwin } from '@/components/digital-twin'
+import { createEngine, type Profile } from '@/lib/engine'
 
 function Field({
   label,
@@ -47,24 +51,95 @@ export function Onboarding({
   onChange: (key: keyof Profile) => (value: string) => void
   onSubmit: (event: React.FormEvent) => void
 }) {
+  // A real engine built from the profile being typed — the preview twin is the
+  // same simulation the dashboard will run, never a fake illustration.
+  const preview = useMemo(() => createEngine(profile), [profile])
+
   return (
-    <main className="onboarding">
-      <header className="onboard-brand">
-        <div className="brand-mark" /> VITALTWIN <span>PERSONAL HEALTH INTELLIGENCE</span>
-      </header>
-      <section className="onboard-card">
-        <div className="eyebrow">
-          <ShieldCheck /> PRIVATE LOCAL PROFILE · SYNTHETIC DATA
+    <main className="landing">
+      <header className="landing-masthead">
+        <div className="side-brand">
+          <div className="brand-mark" />
+          <div>
+            <b>VITALTWIN</b>
+            <small>PERSONAL HEALTH / 01</small>
+          </div>
         </div>
-        <h1>
-          Meet your personal
-          <br />
-          <span>Digital Twin.</span>
-        </h1>
-        <p>
-          Build a calm, contextual view of your health signals and learn what changes mean against your own baseline. Your twin
-          continuously compares simulated signals to your personal pattern and explains what it notices.
-        </p>
+        <span className="masthead-meta">PERSONAL HEALTH INTELLIGENCE · SIMULATED SIGNALS</span>
+      </header>
+
+      <section className="landing-hero">
+        <div className="landing-copy">
+          <div className="eyebrow">
+            <ShieldCheck /> PRIVATE LOCAL PROFILE · SYNTHETIC DATA
+          </div>
+          <h1>
+            Your health.
+            <br />
+            Simulated.
+            <br />
+            <span>Understood.</span>
+          </h1>
+          <p>
+            Build a calm, contextual view of your health signals and learn what changes mean against your own baseline. Your twin
+            continuously compares simulated signals to your personal pattern and explains what it notices.
+          </p>
+          <div className="landing-stats">
+            <div className="stat">
+              <b>08</b>
+              <span>Signals tracked</span>
+            </div>
+            <div className="stat">
+              <b>3</b>
+              <span>History ranges · 24H / 7D / 30D</span>
+            </div>
+            <div className="stat">
+              <b>100%</b>
+              <span>Stored on this device</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="landing-twin">
+          <div className="panel-heading">
+            <span>TWIN PREVIEW</span>
+            <span className="sync-label on">
+              <i className="green-dot" /> FORMING
+            </span>
+          </div>
+          <DigitalTwin
+            signals={preview.signals}
+            state={preview.twinState}
+            sex={profile.sex}
+            monitorLabel="PREVIEW MODE"
+            live={false}
+          />
+          <div className="twin-footer">
+            <span>
+              <small>MODEL</small>
+              <b>VT-01</b>
+            </span>
+            <span>
+              <small>SOURCE</small>
+              <b>YOUR INTAKE</b>
+            </span>
+            <span>
+              <small>STATE</small>
+              <b>{preview.twinState}</b>
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-form">
+        <div className="form-head">
+          <div className="eyebrow">01 / PATIENT INTAKE</div>
+          <h2>Build your twin.</h2>
+          <p>
+            A few details set your personal baseline — the reference every signal is compared against. Nothing here leaves this
+            device.
+          </p>
+        </div>
         <form onSubmit={onSubmit}>
           <div className="form-grid">
             <Field label="Full name" name="name" value={profile.name} onChange={onChange('name')} placeholder="Your name" required />
@@ -128,8 +203,8 @@ export function Onboarding({
           </button>
         </form>
         <p className="demo-disclaimer">
-          VitalTwin is a prototype for personal health intelligence using synthetic signals. It is not a medical diagnostic
-          system or emergency service.
+          <ShieldCheck /> VitalTwin is a prototype for personal health intelligence using synthetic signals. It is not a medical
+          diagnostic system or emergency service.
         </p>
       </section>
     </main>
